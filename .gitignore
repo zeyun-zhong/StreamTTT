@@ -1,0 +1,49 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- environments ---
+.venv/
+venv/
+env/
+ENV/
+*.env
+
+# --- test artifacts ---
+.pytest_cache/
+
+# --- notebooks ---
+.ipynb_checkpoints/
+
+# --- IDEs ---
+.idea/
+*.iml
+.vscode/
+
+# --- agent tooling ---
+.claude/
+.codex
+.agents
+
+# --- run artifacts ---
+outputs/
+trainer_output/
+wandb/
+*.out
+*.err
+results/
+
+# --- local scratch ---
+tmp.py
+debug/
+external/
+RELEASE_PLAN.md
+TODO.md
+streamttt.pdf
+scripts/release/
