@@ -7,6 +7,8 @@
 <sup>1</sup>National University of Singapore &nbsp;&nbsp; <sup>2</sup>Karlsruhe Institute of Technology
 
 [![arXiv](https://img.shields.io/badge/arXiv-2608.13416-b31b1b.svg)](https://arxiv.org/pdf/2608.13416)
+[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Model-StreamTTT--4B-ffc107.svg)](https://huggingface.co/zeyun-zhong/StreamTTT-4B)
+[![Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-RealTimeVideo--Instruct--112K-ffc107.svg)](https://huggingface.co/datasets/zeyun-zhong/RealTimeVideo-Instruct-112K)
 
 ---
 
