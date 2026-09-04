@@ -24,5 +24,4 @@ torchrun --standalone --nproc_per_node="${NPROC}" -m evaluation.videomme.distrib
   --max_window_frames 384 \
   --fps 2 \
   --save_every_n_samples 256 \
-  --resume \
   "$@"

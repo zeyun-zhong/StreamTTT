@@ -21,14 +21,6 @@ from qwen_vl_utils import process_vision_info
 from . import data_list
 from .utils import *
 
-local_rank = None
-
-
-def rank0_print(*args):
-    if local_rank == 0:
-        print(*args)
-
-
 def get_llava_video_path(data_dir: str, ann):
     video_path = os.path.join(data_dir, ann["data_path"], ann["data_source"], ann["video"])
     return video_path
@@ -79,7 +71,6 @@ class SupervisedVideoDataset(Dataset):
 
         dataset = data_args.dataset_use.split(",")
         dataset_list = data_list(dataset)
-        rank0_print(f"Loading datasets: {dataset_list}")
 
         list_data_dict = []
 
@@ -101,13 +92,10 @@ class SupervisedVideoDataset(Dataset):
 
             list_data_dict += annotations
 
-        rank0_print(f"Total training samples: {len(list_data_dict)}")
-
         self.list_data_dict = list_data_dict
         self.data_args = data_args
 
-        self.is_qwen3 = True  # both supported model types are Qwen3-VL based
-        self.image_patch_size = 16 if self.is_qwen3 else 14
+        self.image_patch_size = 16
 
         if data_args.video_max_pixels > 768:
             raise ValueError(f"Our current implementation expects pixels to be number of tokens. "
@@ -169,14 +157,13 @@ class SupervisedVideoDataset(Dataset):
             content["video_end"] = video_end
 
         messages = [{"role": "user", "content": [content]}]
-        _, video_input, video_kwargs = process_vision_info(messages, image_patch_size=self.image_patch_size, return_video_kwargs=True, return_video_metadata=self.is_qwen3)
-
-        if self.is_qwen3:  # qwen3
-            videos, video_metadatas = zip(*video_input)
-            videos, video_metadatas = list(videos), list(video_metadatas)
-        else:  # qwen2.5
-            videos = video_input
-            video_metadatas = [None]
+        _, video_input, video_kwargs = process_vision_info(
+            messages,
+            image_patch_size=self.image_patch_size,
+            return_video_kwargs=True,
+            return_video_metadata=True,
+        )
+        videos, video_metadatas = zip(*video_input)
 
         return videos[0], video_metadatas[0], video_kwargs
 
@@ -322,7 +309,3 @@ def make_supervised_data_module(data_args) -> dict:
     return dict(
         train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator
     )
-
-
-if __name__ == "__main__":
-    pass

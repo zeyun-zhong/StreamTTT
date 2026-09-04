@@ -3,10 +3,6 @@
 # Usage: DATA_DIR=... CKPT=... bash scripts/eval/ovo_bench.sh [--splits backward --tasks EPM]
 set -euo pipefail
 
-export HF_HOME=$DATA_DIR
-export HF_DATASETS_OFFLINE=1
-export TRANSFORMERS_OFFLINE=1
-
 : "${DATA_DIR:?set DATA_DIR to the benchmark root}"
 : "${CKPT:?set CKPT to a trained StreamTTT checkpoint directory}"
 NPROC="${NPROC:-$(python3 -c 'import torch;print(torch.cuda.device_count())')}"
@@ -27,5 +23,4 @@ torchrun --standalone --nproc_per_node="${NPROC}" -m evaluation.ovo_bench.evalua
   --max_window_duration 96 \
   --fps 2 \
   --save_every_n_samples 64 \
-  --resume \
   "$@"

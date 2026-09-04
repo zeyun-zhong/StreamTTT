@@ -189,9 +189,6 @@ def gradient_clip(grad, max_norm=1.0):
 class FastWeightBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.num_heads = config.num_attention_heads
-        self.num_kv_heads = config.num_key_value_heads
-
         self.chunk_size = getattr(config, "lact_chunk_size", 2048)
         self.num_fw_heads = getattr(config, "num_fw_heads", 4)
         self.num_fw_kv_heads = getattr(config, "num_fw_kv_heads", 4)
@@ -310,16 +307,9 @@ class FastWeightBlock(nn.Module):
     def forward(
         self,
         hidden_states: torch.Tensor,  # [b, s, d]
-        query_states: torch.Tensor,
-        key_states: torch.Tensor,
-        value_states: torch.Tensor,
-        position_embeddings: Optional[tuple] = None,  # (cos, sin)
         prev_states: tuple[torch.Tensor, torch.Tensor, torch.Tensor] = None,
         is_generation: bool = False,
-        **kwargs,
     ):
-        bsz, q_len, _ = hidden_states.size()
-
         mixed_qkv = self.qkv(hidden_states)
         mixed_qkv = mixed_qkv.transpose(1, 2)
         conv_prefix, prev_states = self._split_prev_states(prev_states)

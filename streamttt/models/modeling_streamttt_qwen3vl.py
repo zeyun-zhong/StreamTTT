@@ -1,18 +1,14 @@
-
 from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
-from einops import rearrange, repeat
 from transformers import Cache
 from transformers.cache_utils import DynamicCache
 from transformers.masking_utils import create_causal_mask, create_sliding_window_causal_mask
 from transformers.modeling_outputs import BaseModelOutputWithPast
-from transformers.modeling_outputs import CausalLMOutput
 
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, Callable
+from typing import Callable, List, Optional, Tuple, Union
 
 from transformers.models.qwen3_vl.modeling_qwen3_vl import (
     Qwen3VLTextModel,
@@ -22,7 +18,6 @@ from transformers.models.qwen3_vl.modeling_qwen3_vl import (
     apply_rotary_pos_emb,
     eager_attention_forward,
     ALL_ATTENTION_FUNCTIONS,
-    Qwen3VLTextRMSNorm,
     Qwen3VLCausalLMOutputWithPast
 )
 
@@ -141,10 +136,6 @@ class StreamTTTAttention(nn.Module):
 
         ttt_x, recurrent_state = self.ttt_block(
             hidden_states,
-            query_states.reshape(*input_shape, -1),
-            key_states.reshape(*input_shape, -1),
-            value_states.reshape(*input_shape, -1),
-            position_embeddings,
             prev_states=prev_states,
             is_generation=is_generation,
         )

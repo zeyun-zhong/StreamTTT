@@ -23,5 +23,4 @@ torchrun --standalone --nproc_per_node="${NPROC}" -m evaluation.streamingbench.d
   --max_window_duration 64 \
   --fps 2 \
   --save_every_n_samples 256 \
-  --resume \
   "$@"

@@ -43,14 +43,6 @@ from streamttt.train.arguments import (
 from streamttt.train.trainer import StreamTTTTrainer
 from transformers import set_seed
 
-local_rank = None
-
-
-def rank0_print(*args):
-    if local_rank == 0:
-        print(*args)
-
-
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str):
     """Collects the state dict and dump to disk."""
 
@@ -65,14 +57,6 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
                           state_dict.items()}
         del state_dict
         trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
-
-
-def count_learnable_params(model):
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    all_params = sum(p.numel() for p in model.parameters())
-    print(f"Trainable params: {trainable_params} / {all_params} ({100 * trainable_params / all_params:.2f}%)")
-    return trainable_params / all_params
-
 
 def set_model(model_args, model):
     """Freeze everything, then re-enable exactly what this run is meant to train."""
@@ -116,8 +100,6 @@ def set_model(model_args, model):
 
 
 def train(attn_implementation="flash_attention_2"):
-    global local_rank
-
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments)
     )
@@ -126,7 +108,6 @@ def train(attn_implementation="flash_attention_2"):
     training_args.gradient_checkpointing_kwargs = {"use_reentrant": False}
 
     set_seed(training_args.seed)
-    local_rank = training_args.local_rank
     os.makedirs(training_args.output_dir, exist_ok=True)
 
     model, tokenizer, processor = build_model_tokenizer_processor(model_args, training_args, attn_implementation)
@@ -135,7 +116,6 @@ def train(attn_implementation="flash_attention_2"):
         set_model(model_args, model)
 
     data_args.processor = processor
-    data_args.model_name = model_args.model_type
     data_module = make_supervised_data_module(data_args=data_args)
     trainer = StreamTTTTrainer(
         model=model, processing_class=tokenizer, args=training_args,
