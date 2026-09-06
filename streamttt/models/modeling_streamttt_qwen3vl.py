@@ -1,3 +1,4 @@
+import contextlib
 from dataclasses import dataclass
 
 import torch
@@ -375,10 +376,64 @@ class StreamTTTQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration):
         return model_inputs
 
     def _custom_init(self):
+        """Initialize the TTT branch after `from_pretrained` has filled the backbone.
+
+        Under DeepSpeed ZeRO-3 (`zero_optimization.stage == 3` with `zero3_init_flag`),
+        `deepspeed.zero.Init` partitions every parameter as soon as the module that
+        owns it finishes `__init__`, replacing `param.data` with a zero-element
+        tensor. Writing through `.data` there — which is what `nn.init.*` and
+        `weight.data.normal_()` do — silently writes nothing, so the branch would
+        keep whatever `from_pretrained` left behind. Since a TTT block with zero
+        `qkv`/`o_proj` emits exactly zero and therefore receives exactly zero
+        gradient, that mistake is unrecoverable: the branch stays dead for the whole
+        run. Gather the parameters first, and verify afterwards.
+        """
+        targets = []
         for module in self.model.modules():
             if isinstance(module, StreamTTTAttention):
-                if hasattr(module, "alpha") and module.alpha is not None:
-                    nn.init.constant_(module.alpha, 0.1)
-
+                if getattr(module, "alpha", None) is not None:
+                    targets.append((module, [("alpha", module.alpha)]))
             if isinstance(module, FastWeightBlock):
-                module._init_weights()
+                targets.append((module, list(module.named_parameters(recurse=True))))
+
+        for module, named_params in targets:
+            with _maybe_gathered([p for _, p in named_params]):
+                if isinstance(module, FastWeightBlock):
+                    module._init_weights()
+                else:
+                    nn.init.constant_(module.alpha, 0.1)
+                _assert_initialized(module, named_params)
+
+
+def _maybe_gathered(params):
+    """`deepspeed.zero.GatheredParameters` under ZeRO-3, a no-op otherwise."""
+    try:
+        from transformers.integrations import is_deepspeed_zero3_enabled
+        if not is_deepspeed_zero3_enabled():
+            return contextlib.nullcontext()
+        import deepspeed
+    except ImportError:
+        return contextlib.nullcontext()
+    return deepspeed.zero.GatheredParameters(params, modifier_rank=0)
+
+
+def _assert_initialized(module, named_params):
+    """Fail loudly on the one init bug this model cannot survive: an all-zero branch.
+
+    Must run inside the same gathered context that wrote the values, otherwise it
+    inspects empty ZeRO-3 shards and passes vacuously.
+    """
+    # Parameters that are zero on purpose; everything else must carry signal.
+    zero_by_design = ("ttt_norm_bias", "momentum_proj.bias", "decay_proj.bias")
+    for name, param in named_params:
+        if param.numel() == 0:  # still partitioned: nothing to check
+            return
+        if name.endswith(zero_by_design):
+            continue
+        if not torch.any(param != 0):
+            raise RuntimeError(
+                f"TTT parameter {type(module).__name__}.{name} is all zeros after "
+                f"_custom_init(). A zero qkv/o_proj makes the TTT branch emit zero and "
+                f"receive zero gradient, so it can never train. This usually means the "
+                f"init ran on unmaterialized (ZeRO-3 / meta-device) parameters."
+            )
