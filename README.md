@@ -30,9 +30,10 @@ while the fixed-size TTT state carries forward without eviction, and M-RoPE
 positions stay globally continuous.
 
 Trained jointly on offline long-video QA and a new real-time QA corpus,
-StreamTTT-4B beats the same-scale SimpleStream-4B on OVO-Bench by 1.4 points in
-real-time perception and 3.7 in backward tracing, and stays competitive with the
-larger SimpleStream-8B on StreamingBench RTVU.
+StreamTTT-4B outperforms the same-scale SimpleStream-4B on OVO-Bench by 0.6
+points in real-time perception and 5.3 in backward tracing. It also surpasses
+the larger SimpleStream-8B by 0.73 points on StreamingBench's Real-Time Visual
+Understanding (RTVU) subset.
 
 ## Installation
 
